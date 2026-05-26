@@ -168,7 +168,7 @@ const NutritionSystem = {
     const macros = this.baseMacros[phaseId];
     
     // Check if it's a refeed day (every 21 days)
-    const isRefeed = (dayNumber % 21 === 0 && dayNumber !== 163);
+  const isRefeed = (dayNumber % 21 === 0 && dayNumber !== 173);
 
     return {
       phase: phaseId,
