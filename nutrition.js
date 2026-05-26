@@ -4,12 +4,12 @@ const NutritionSystem = {
   // Phase 1-3: ~1900 kcal (Protein: 160g, Carbs: 180g, Fat: 50g)
   // Phase 4: ~1700 kcal (Protein: 165g, Carbs: 140g, Fat: 40g) - deep deficit to force absolute fat mobilization
   // Phase 5: ~1800 kcal (Carb depletion/loading period)
-  baseMacros: {
-    1: { calories: 1900, protein: 160, carbs: 180, fats: 50 },
-    2: { calories: 1900, protein: 160, carbs: 180, fats: 50 },
-    3: { calories: 1900, protein: 160, carbs: 180, fats: 50 },
-    4: { calories: 1700, protein: 165, carbs: 140, fats: 40 },
-    5: { calories: 1800, protein: 160, carbs: 160, fats: 45 }
+ baseMacros: {
+    1: { calories: 1900, protein: 195, carbs: 180, fats: 50 }, // Calibrated to 195g
+    2: { calories: 1900, protein: 195, carbs: 180, fats: 50 }, // Calibrated to 195g
+    3: { calories: 1900, protein: 195, carbs: 180, fats: 50 }, // Calibrated to 195g
+    4: { calories: 1700, protein: 195, carbs: 140, fats: 40 }, // Calibrated to 195g
+    5: { calories: 1800, protein: 195, carbs: 160, fats: 45 }  // Calibrated to 195g
   },
 
   // Detailed 700ml Bowl dimensions: Upper diam 15cm, Base diam 7cm, Height 7cm
