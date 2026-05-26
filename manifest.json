@@ -1,0 +1,20 @@
+{
+  "name": "TransformOS — Sean's Protocol",
+  "short_name": "TransformOS",
+  "description": "Elite body recomposition + NEET mastery. June 1 – Nov 10, 2026.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07070e",
+  "theme_color": "#818cf8",
+  "categories": ["health", "fitness", "education"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

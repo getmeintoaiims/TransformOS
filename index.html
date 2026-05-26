@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TransformOS — Sean's Protocol</title>
+  
+  <!-- PWA Capabilities for iOS Standalone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TransformOS">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  
+  <!-- CSS Styling -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Sticky Cyberpunk Header -->
+  <header>
+    <div class="brand">
+      <h1 id="app-title">⚡ TransformOS</h1>
+      <div class="streak-badge" id="streak-badge">
+        🔥 <span id="streak-count">0</span> Days
+      </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="switchTab('checklist-view', this)">📅 Checklist</button>
+      <button class="tab-btn" onclick="switchTab('gym-view', this)">🏋️ Gym Hub</button>
+      <button class="tab-btn" onclick="switchTab('diet-view', this)">🍲 Diet Lab</button>
+      <button class="tab-btn" onclick="switchTab('neet-view', this)">📚 NEET Prep</button>
+      <button class="tab-btn" onclick="switchTab('metrics-view', this)">⚙️ Settings</button>
+    </nav>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main>
+
+    <!-- 1. DAILY CHECKLIST VIEW -->
+    <div id="checklist-view" class="view active">
+      
+      <!-- Date Slider Selector -->
+      <div class="date-selector">
+        <button class="date-btn" id="prev-date-btn" onclick="adjustDate(-1)">←</button>
+        <div class="date-display">
+          <span class="day-num" id="day-num-display">Day 1 of 163</span>
+          <span class="calendar-date" id="calendar-date-display">June 1, 2026</span>
+        </div>
+        <button class="date-btn" id="next-date-btn" onclick="adjustDate(1)">→</button>
+      </div>
+
+      <!-- General Recomp Phase Card -->
+      <div class="card" id="phase-banner-card">
+        <h2 id="phase-title">Active Phase</h2>
+        <p id="phase-desc" class="ex-detail"></p>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="phase-progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Core Tasks Checklist Card -->
+      <div class="card">
+        <h2>⚡ Today's Protocol Checklist</h2>
+        <div class="checklist" id="daily-tasks-list">
+          <!-- Dynamically populated checklist items with custom styled checkboxes -->
+        </div>
+      </div>
+      
+      <!-- Quick Progress Bar Card -->
+      <div class="card">
+        <h2>🔥 Streak & Recomp Journey</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="value" id="recomp-percent-display">0%</span>
+            <span class="label">163-Day Goal</span>
+          </div>
+          <div class="stat-box">
+            <span class="value" id="study-percent-display">0%</span>
+            <span class="label">NEET First Pass</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. GYM HUB VIEW -->
+    <div id="gym-view" class="view">
+      <div class="card">
+        <h2>🏋️ Hypertrophy Exercises & EMG Rationales</h2>
+        <p class="ex-detail" style="color: var(--text-muted);">
+          Every movement is biomechanically optimized to deliver the highest possible hypertrophic stimulus with the absolute lowest joint fatigue.
+        </p>
+        <div class="checklist" id="gym-exercises-directory">
+          <!-- Dynamically populated from TrainingSystem.exercises -->
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🧘 Posture Alignment Regimen (Daily)</h2>
+        <p class="ex-detail" style="color: var(--text-muted);">
+          Combats Anterior Pelvic Tilt (APT) and forward-head neck hump. Perform daily.
+        </p>
+        <div class="checklist" id="gym-posture-directory">
+          <!-- Dynamically populated from TrainingSystem.posture -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. DIET LAB VIEW -->
+    <div id="diet-view" class="view">
+      
+      <!-- Vegetarian vs Eggitarian Toggle -->
+      <div class="card">
+        <h2>🍲 Diet Preference</h2>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="diet-toggle-egg" onclick="setDietPreference('eggitarian')">Egg-itarian (Recommended)</button>
+          <button class="toggle-btn" id="diet-toggle-veg" onclick="setDietPreference('vegetarian')">Strict Vegetarian</button>
+        </div>
+      </div>
+
+      <!-- Calorie/Macro Target Card -->
+      <div class="card">
+        <h2>🎯 Today's Macro Target</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="value" id="diet-calories-display">1900</span>
+            <span class="label">Kcal Target</span>
+          </div>
+          <div class="stat-box">
+            <span class="value" id="diet-protein-display">160g</span>
+            <span class="label">Protein Target</span>
+          </div>
+        </div>
+        <p class="ex-detail" id="refeed-alert-text" style="color: var(--accent); font-weight: bold; text-align: center;"></p>
+      </div>
+
+      <!-- 700ml Bowl Visual conversions -->
+      <div class="card">
+        <h2>🥣 700ml Bowl Visual Scaling</h2>
+        <p class="ex-detail" style="color: var(--text-muted);">
+          Your bowl: Upper diameter 15cm | Base 7cm | Height 7cm (~700ml total volume).
+        </p>
+        <div class="checklist" id="diet-bowl-directory">
+          <!-- Dynamically loaded bowl metrics -->
+        </div>
+      </div>
+
+      <!-- Detailed Meal Schedule -->
+      <div class="card">
+        <h2>🍽️ Structured Meal Breakdown</h2>
+        <div class="checklist" id="diet-meals-schedule">
+          <!-- Dynamically populated meals -->
+        </div>
+      </div>
+
+      <!-- Supplements -->
+      <div class="card">
+        <h2>💊 Scientifically Validated Supplement Stack</h2>
+        <div class="checklist" id="diet-supplements-stack">
+          <!-- Supplements -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. NEET PREP HUB VIEW -->
+    <div id="neet-view" class="view">
+      
+      <div class="card">
+        <h2>📚 NEET Spaced Repetition Syllabus Tracker</h2>
+        <p class="ex-detail" style="color: var(--text-muted);">
+          Finishing the complete syllabus twice before November 20th using scientific spaced intervals.
+        </p>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="neet-syllabus-bar-fill"></div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="value" id="neet-studied-count">0</span>
+            <span class="label">First Pass Done</span>
+          </div>
+          <div class="stat-box">
+            <span class="value" id="neet-total-chapters">80</span>
+            <span class="label">Total Chapters</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEET Chapters Directory with filters -->
+      <div class="card">
+        <h2>📖 NMC Chapter Index</h2>
+        <div class="toggle-group" style="margin-bottom: 12px;">
+          <button class="toggle-btn active" id="subject-all-btn" onclick="filterSyllabus('All')">All</button>
+          <button class="toggle-btn" id="subject-bio-btn" onclick="filterSyllabus('Biology')">Bio</button>
+          <button class="toggle-btn" id="subject-phy-btn" onclick="filterSyllabus('Physics')">Phy</button>
+          <button class="toggle-btn" id="subject-chem-btn" onclick="filterSyllabus('Chemistry')">Chem</button>
+        </div>
+        <div class="checklist" id="neet-chapters-directory" style="max-height: 400px; overflow-y: auto;">
+          <!-- Dynamically generated list -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5. METRICS & SETTINGS VIEW -->
+    <div id="metrics-view" class="view">
+      <div class="card">
+        <h2>⚙️ System Calibration</h2>
+        <p class="ex-detail" style="color: var(--text-muted);">
+          Control and calibrate your local state and study/fitness goals.
+        </p>
+        
+        <button class="text-btn" onclick="exportData()">Data Export Backup (JSON)</button>
+        <button class="text-btn" onclick="resetAppData()" style="border-color: var(--accent); color: var(--accent);">Reset All Progress</button>
+      </div>
+
+      <div class="card">
+        <h2>🔬 The Scientific Recomp Formula</h2>
+        <p class="ex-detail">
+          Designed by world-class physique optimization researchers. Muscle tissue hypertrophy is optimized by training muscles in their stretched length (using cable raises, deep press eccentrics, and single arm scapular pulls). Fat loss is governed by thermodynamic deficit combined with double-toned dairy and soya chunks for high nutrient density.
+        </p>
+        <p class="ex-detail">
+          NEET spaced repetition enforces recall intervals of Day 1, Day 3, Day 10, Day 30, and Day 60 to prevent memory decay, leading to maximum scores in physical exam environments.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- PWA Core Engines & Launcher Scripts -->
+  <script src="training.js"></script>
+  <script src="nutrition.js"></script>
+  <script src="study.js"></script>
+  <script src="app.js"></script>
+
+  <!-- Service Worker Register Script -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker Active', reg.scope))
+          .catch(err => console.log('Service Worker Failed', err));
+      });
+    }
+  </script>
+</body>
+</html>
