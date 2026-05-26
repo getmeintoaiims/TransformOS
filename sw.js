@@ -1,4 +1,4 @@
-const CACHE_NAME = 'transformos-v1';
+const CACHE_NAME = 'transformos-v2';
 const ASSETS = [
   './',
   './index.html',
