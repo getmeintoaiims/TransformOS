@@ -103,7 +103,7 @@ const StudySystem = {
     if (dayNumber <= totalChapters) {
       newChapter = this.chapters[dayNumber - 1];
     } else {
-      // --- SECOND PASS (Day 81 to 163: August 20th to November 10th) ---
+    // --- SECOND PASS (Day 81 to 173: August 20th to November 20th) ---
       // Sean covers the syllabus a second full time systematically
       isSecondPassActive = true;
       const secondPassIndex = (dayNumber - totalChapters - 1) % totalChapters;
