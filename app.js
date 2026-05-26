@@ -1,8 +1,8 @@
 // --- CORE APP STATE & CONFIGURATION ---
 const AppConfig = {
   startDate: new Date('2026-06-01T00:00:00'),
-  endDate: new Date('2026-11-10T23:59:59'),
-  totalDays: 163
+  endDate: new Date('2026-11-20T23:59:59'), // Calibrated to Nov 20th
+  totalDays: 173                             // Calibrated to 173 Days
 };
 
 let AppState = {
