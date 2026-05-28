@@ -1,15 +1,29 @@
-// --- TRANSFORMOS MASTER CORE V2.1 ---
+// --- TRANSFORMOS MASTER CORE V2.2 ---
 // Calibrated to Start Timeline: May 29, 2026
 
 const AppConfig = {
   startDate: new Date('2026-05-29T00:00:00'),
-  totalDays: 173
+  totalDays: 173,
+  wakeHour: 6,  // 06:00 AM
+  sleepHour: 22 // 10:00 PM
 };
 
 let AppState = {
   activeDate: new Date('2026-05-29T00:00:00'),
-  completedTasks: {} // Key: YYYY-MM-DD, Value: Object map of checkboxes
+  completedTasks: {} 
 };
+
+// Accountability phrases to push your focus
+const GrindPrompts = [
+  "Are you grinding right now? Check your schedule.",
+  "Stop drifting. Log back into your active targets.",
+  "Biology and Chemistry targets don't clear themselves. Focus.",
+  "Did you hit your tracking bowl protein metrics this hour?",
+  "Eyes on the prize. Stand up, adjust your posture, and get back to work.",
+  "Consistency check. Are you executing or procrastinating?",
+  "The 173-day countdown is moving. Make this hour count.",
+  "Check a box off your list right now. Push the streak forward."
+];
 
 function initAppTime() {
   const now = new Date();
@@ -24,6 +38,10 @@ function initAppTime() {
   
   const savedTasks = localStorage.getItem('t_os_v2_tasks');
   if (savedTasks) AppState.completedTasks = JSON.parse(savedTasks);
+  
+  // Initialize Hourly Background Interval Clock
+  checkNotificationUIState();
+  setInterval(runHourlyGrindCheckLoop, 30000); // Check system time every 30 seconds
 }
 
 function saveState() {
@@ -37,18 +55,80 @@ function getDayNumber(targetDate) {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
+// --- HOURLY NOTIFICATION GRIND ENGINE ---
+function checkNotificationUIState() {
+  const btn = document.getElementById('noti-toggle-btn');
+  if (!btn) return;
+  if (Notification.permission === 'granted') {
+    btn.innerText = "REMINDERS ACTIVE 🛡️";
+    btn.classList.add('enabled-active');
+  }
+}
+
+function requestNotificationAccess() {
+  if (!('Notification' in window)) {
+    alert("This device layout does not support native web notifications.");
+    return;
+  }
+  
+  Notification.requestPermission().then(permission => {
+    if (permission === 'granted') {
+      checkNotificationUIState();
+      // Send a test notification immediately
+      sendGrindNotification("System Armed 🚀", "TransformOS will now check your grind status every hour.");
+    }
+  });
+}
+
+function runHourlyGrindCheckLoop() {
+  if (Notification.permission !== 'granted') return;
+  
+  const now = new Date();
+  const currentHour = now.getHours();
+  
+  // Strict window logic check
+  if (currentHour >= AppConfig.wakeHour && currentHour < AppConfig.sleepHour) {
+    const lastNotifiedHour = localStorage.getItem('t_os_last_notified_hour');
+    
+    // Check if we already fired a alert notification during this calendar hour block
+    if (lastNotifiedHour !== currentHour.toString()) {
+      localStorage.setItem('t_os_last_notified_hour', currentHour.toString());
+      
+      // Select a random phrase from the accountability pool
+      const randomPrompt = GrindPrompts[Math.floor(Math.random() * GrindPrompts.length)];
+      sendGrindNotification(`GRIND CHECK — ${currentHour}:00 ⚡`, randomPrompt);
+    }
+  }
+}
+
+function sendGrindNotification(title, message) {
+  // Try sending via Service Worker first (best compatibility for background PWA mode)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification(title, {
+        body: message,
+        icon: 'icon.svg',
+        badge: 'icon.svg',
+        tag: 'grind-alert-id',
+        renotify: true
+      });
+    });
+  } else {
+    // Standard application fallback alert
+    new Notification(title, { body: message });
+  }
+}
+
 // --- CALCULATION STREAK SYSTEM ---
 function calculateAndRenderStreak() {
   let runningStreak = 0;
   let checkDate = new Date(AppConfig.startDate);
   const todayStr = new Date().toISOString().split('T')[0];
   
-  // Loop forward chronologically from day one up to today's date
   while (true) {
     const dateStr = checkDate.toISOString().split('T')[0];
     const dayData = AppState.completedTasks[dateStr] || {};
     
-    // Total items required to finalize completion for the day
     const requiredIds = [
       "t_neet_study", "t_neet_rev", "t_gym", "t_protein",
       "sched_0600", "sched_0800", "sched_1000", "sched_1300", 
@@ -61,7 +141,6 @@ function calculateAndRenderStreak() {
     if (isDayComplete) {
       runningStreak++;
     } else {
-      // If we hit an incomplete day before today, the active streak breaks
       if (dateStr !== todayStr) {
         runningStreak = 0; 
       }
