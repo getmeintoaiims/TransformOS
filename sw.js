@@ -1,12 +1,9 @@
-const CACHE_NAME = 'transformos-v2';
+const CACHE_NAME = 'transformos-v2-premium';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './training.js',
-  './nutrition.js',
-  './study.js',
   './manifest.json',
   './icon.svg'
 ];
@@ -28,7 +25,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network first falling back to cache approach to combat aggressive iPhone freezing
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
