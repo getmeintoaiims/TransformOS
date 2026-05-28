@@ -452,3 +452,162 @@ window.addEventListener('DOMContentLoaded', () => {
     clockDiv.innerHTML = `${dateFormatted} — <span class="live-clock-time">${timeFormatted}</span>`;
   }, 1000);
 });
+
+// --- LAZY-PROOF CUSTOM TO-DO LIST INJECTOR ---
+window.addEventListener('DOMContentLoaded', () => {
+  // 1. Inject custom styles for the to-do list so you don't touch style.css
+  const todoStyle = document.createElement('style');
+  todoStyle.innerHTML = `
+    .todo-input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .todo-input-group input {
+      flex: 1;
+      background: #1c1c1a;
+      border: 1px solid #2a2a26;
+      padding: 10px;
+      color: white;
+      font-size: 14px;
+    }
+    .todo-input-group input::placeholder {
+      color: #555552;
+    }
+    .todo-input-group input:focus {
+      outline: 1px solid #c5a880;
+    }
+    .todo-add-btn {
+      background: transparent;
+      border: 1px solid #c5a880;
+      color: #c5a880;
+      padding: 0 20px;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .todo-add-btn:hover {
+      background: #c5a880;
+      color: #111;
+    }
+    .custom-todo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px dashed #2a2a26;
+    }
+    .custom-todo-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .custom-todo-left input[type="checkbox"] {
+      accent-color: #c5a880;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .todo-text-span.todo-completed {
+      text-decoration: line-through;
+      color: #a8a29e;
+      opacity: 0.5;
+    }
+    .todo-delete-btn {
+      background: transparent;
+      border: none;
+      color: #8a8e79;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 5px;
+      transition: color 0.2s ease;
+    }
+    .todo-delete-btn:hover {
+      color: #ff4d4d;
+    }
+  `;
+  document.head.appendChild(todoStyle);
+
+  // 2. Create the master layout card for your personal targets
+  const todoCard = document.createElement('div');
+  todoCard.className = 'menu-card';
+  todoCard.innerHTML = `
+    <h3>PERSONAL OBJECTIVES</h3>
+    <div class="todo-input-group">
+      <input type="text" id="custom-todo-input" placeholder="Deploy new custom task..." autocomplete="off">
+      <button class="todo-add-btn" id="custom-todo-add-btn">ADD TASK</button>
+    </div>
+    <div id="custom-todo-list-container" class="task-checklist"></div>
+  `;
+
+  // 3. Spatially position it right beneath your Critical Obligations card
+  const criticalCard = document.querySelector('.dynamic-tasks-card');
+  if (criticalCard) {
+    criticalCard.after(todoCard);
+  }
+
+  // 4. State management and data engine for custom items
+  let customTodos = JSON.parse(localStorage.getItem('t_os_personal_todos')) || [];
+
+  function saveAndRenderTodos() {
+    localStorage.setItem('t_os_personal_todos', JSON.stringify(customTodos));
+    const container = document.getElementById('custom-todo-list-container');
+    if (!container) return;
+
+    if (customTodos.length === 0) {
+      container.innerHTML = `<p style="font-size: 12px; color: #a8a29e; font-style: italic; text-align: center; margin: 10px 0;">No manual objectives deployed for today.</p>`;
+      return;
+    }
+
+    container.innerHTML = customTodos.map((todo, index) => `
+      <div class="custom-todo-row">
+        <div class="custom-todo-left">
+          <input type="checkbox" ${todo.completed ? 'checked' : ''} data-index="${index}" class="todo-toggle-chk">
+          <span class="todo-text-span ${todo.completed ? 'todo-completed' : ''}">${todo.text}</span>
+        </div>
+        <button class="todo-delete-btn" data-index="${index}">×</button>
+      </div>
+    `).join('');
+
+    // Attach modular dynamic event interactions
+    container.querySelectorAll('.todo-toggle-chk').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        const idx = e.target.getAttribute('data-index');
+        customTodos[idx].completed = e.target.checked;
+        saveAndRenderTodos();
+      });
+    });
+
+    container.querySelectorAll('.todo-delete-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = e.target.getAttribute('data-index');
+        customTodos.splice(idx, 1);
+        saveAndRenderTodos();
+      });
+    });
+  }
+
+  // 5. Wire up the input execution handlers
+  function handleAddTodo() {
+    const input = document.getElementById('custom-todo-input');
+    if (!input) return;
+    const taskText = input.value.trim();
+    if (taskText === '') return;
+
+    customTodos.push({ text: taskText, completed: false });
+    input.value = '';
+    saveAndRenderTodos();
+  }
+
+  document.getElementById('custom-todo-add-btn').addEventListener('click', handleAddTodo);
+  document.getElementById('custom-todo-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleAddTodo();
+  });
+
+  // Initial load execution
+  saveAndRenderTodos();
+});
