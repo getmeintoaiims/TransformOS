@@ -411,3 +411,44 @@ window.addEventListener('DOMContentLoaded', () => {
   initAppTime();
   updateApplicationView();
 });
+
+// --- LAZY-PROOF LIVE CLOCK INJECTOR ---
+window.addEventListener('DOMContentLoaded', () => {
+  // 1. Inject the styles automatically so you don't touch style.css
+  const styleTag = document.createElement('style');
+  styleTag.innerHTML = `
+    .live-clock-container {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: #a8a29e;
+      margin: 10px 0;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .live-clock-time {
+      color: #c5a880;
+      font-weight: 700;
+      margin-left: 5px;
+    }
+  `;
+  document.head.appendChild(styleTag);
+
+  // 2. Spawn and drop the clock right under your logo divider
+  const clockDiv = document.createElement('div');
+  clockDiv.className = 'live-clock-container';
+  clockDiv.innerText = 'INITIALIZING TIME MATRIX...';
+  
+  const targetDivider = document.querySelector('.menu-divider');
+  if (targetDivider) {
+    targetDivider.after(clockDiv);
+  }
+
+  // 3. Keep it ticking every second
+  setInterval(() => {
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    clockDiv.innerHTML = `${dateFormatted} — <span class="live-clock-time">${timeFormatted}</span>`;
+  }, 1000);
+});
