@@ -1,5 +1,5 @@
-// --- TRANSFORMOS UNIFIED MASTER ENGINE ---
-// Anchored precisely to user target start timeline: May 29, 2026
+// --- TRANSFORMOS MASTER CORE V2.1 ---
+// Calibrated to Start Timeline: May 29, 2026
 
 const AppConfig = {
   startDate: new Date('2026-05-29T00:00:00'),
@@ -8,10 +8,9 @@ const AppConfig = {
 
 let AppState = {
   activeDate: new Date('2026-05-29T00:00:00'),
-  completedTasks: {} // Key: YYYY-MM-DD string, Value: Object map of checked values
+  completedTasks: {} // Key: YYYY-MM-DD, Value: Object map of checkboxes
 };
 
-// Initialize system dates relative to runtime clock
 function initAppTime() {
   const now = new Date();
   const currentDateStr = now.toISOString().split('T')[0];
@@ -23,13 +22,13 @@ function initAppTime() {
     AppState.activeDate = new Date(AppConfig.startDate);
   }
   
-  // Load data cache
   const savedTasks = localStorage.getItem('t_os_v2_tasks');
   if (savedTasks) AppState.completedTasks = JSON.parse(savedTasks);
 }
 
 function saveState() {
   localStorage.setItem('t_os_v2_tasks', JSON.stringify(AppState.completedTasks));
+  calculateAndRenderStreak();
 }
 
 function getDayNumber(targetDate) {
@@ -38,7 +37,44 @@ function getDayNumber(targetDate) {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-// --- MASSIVE GYM COMPENDIO DATABASE ---
+// --- CALCULATION STREAK SYSTEM ---
+function calculateAndRenderStreak() {
+  let runningStreak = 0;
+  let checkDate = new Date(AppConfig.startDate);
+  const todayStr = new Date().toISOString().split('T')[0];
+  
+  // Loop forward chronologically from day one up to today's date
+  while (true) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dayData = AppState.completedTasks[dateStr] || {};
+    
+    // Total items required to finalize completion for the day
+    const requiredIds = [
+      "t_neet_study", "t_neet_rev", "t_gym", "t_protein",
+      "sched_0600", "sched_0800", "sched_1000", "sched_1300", 
+      "sched_1400", "sched_1530", "sched_1600", "sched_1830", 
+      "sched_1930", "sched_2200"
+    ];
+    
+    const isDayComplete = requiredIds.every(id => dayData[id] === true);
+    
+    if (isDayComplete) {
+      runningStreak++;
+    } else {
+      // If we hit an incomplete day before today, the active streak breaks
+      if (dateStr !== todayStr) {
+        runningStreak = 0; 
+      }
+    }
+    
+    if (dateStr === todayStr) break;
+    checkDate.setDate(checkDate.getDate() + 1);
+  }
+  
+  document.getElementById('streak-display').innerText = `${runningStreak} DAY STREAK 🔥`;
+}
+
+// --- EXERCISE CATALOG SYSTEM ---
 const GymDatabase = {
   categories: {
     chest: [
@@ -71,27 +107,26 @@ const GymDatabase = {
     ]
   },
   
-  // Deterministic daily routines based on active phase
   getRoutineForDay: function(dayNum) {
-    if (dayNum <= 30) { // Phase 1: Upper / Lower Split
+    if (dayNum <= 30) {
       const cycle = (dayNum - 1) % 7;
       if (cycle === 0) return { name: "Upper A", keys: ["incline_db_press", "single_arm_lat_pulldown", "behind_back_cable_lateral", "chest_supported_db_rear_row", "decline_cable_crunch"] };
       if (cycle === 1) return { name: "Lower A", keys: ["leg_press", "romanian_deadlift", "db_bulgarian_split_squat"] };
-      if (cycle === 2) return { name: "Rest & Active Posture Recovery", keys: [] };
+      if (cycle === 2) return { name: "Rest & Recovery", keys: [] };
       if (cycle === 3) return { name: "Upper B", keys: ["low_to_high_cable_fly", "chest_supported_neutral_row", "behind_back_cable_lateral", "cable_rear_delt_fly", "hanging_leg_raise"] };
       if (cycle === 4) return { name: "Lower B", keys: ["romanian_deadlift", "leg_press", "db_bulgarian_split_squat"] };
-      return { name: "Rest & Active Recovery", keys: [] };
-    } else { // Phase 2+: Push / Pull / Legs
+      return { name: "Rest & Recovery", keys: [] };
+    } else {
       const cycle = (dayNum - 1) % 4;
-      if (cycle === 0) return { name: "Push Day Protocol", keys: ["incline_db_press", "low_to_high_cable_fly", "behind_back_cable_lateral", "decline_cable_crunch"] };
-      if (cycle === 1) return { name: "Pull Day Protocol", keys: ["single_arm_lat_pulldown", "chest_supported_neutral_row", "chest_supported_db_rear_row", "cable_rear_delt_fly"] };
-      if (cycle === 2) return { name: "Legs Deep Loading", keys: ["romanian_deadlift", "leg_press", "db_bulgarian_split_squat", "hanging_leg_raise"] };
-      return { name: "Systemic Recovery Rest", keys: [] };
+      if (cycle === 0) return { name: "Push Day", keys: ["incline_db_press", "low_to_high_cable_fly", "behind_back_cable_lateral", "decline_cable_crunch"] };
+      if (cycle === 1) return { name: "Pull Day", keys: ["single_arm_lat_pulldown", "chest_supported_neutral_row", "chest_supported_db_rear_row", "cable_rear_delt_fly"] };
+      if (cycle === 2) return { name: "Legs Day", keys: ["romanian_deadlift", "leg_press", "db_bulgarian_split_squat", "hanging_leg_raise"] };
+      return { name: "Rest Day", keys: [] };
     }
   }
 };
 
-// --- DIRECT LINEAR NEET SYLLABUS LOG ENGINE ---
+// --- LINEAR NEET ENGINE ---
 const NeetDatabase = {
   chapters: [
     "Units & Measurements", "Motion in a Straight Line", "Motion in a Plane", "Laws of Motion", 
@@ -105,30 +140,24 @@ const NeetDatabase = {
   
   getTaskForDay: function(dayNum) {
     const total = this.chapters.length;
-    // Primary Chapter Allocation (Pass 1)
     const primaryIndex = (dayNum - 1) % total;
     const primaryChapter = this.chapters[primaryIndex];
     
-    // Revision Target Calculation (3 days behind for active recall loop)
-    let revChapter = "No Revision Assigned yet (Initial Consolidation Running)";
+    let revChapter = "Initial Track Syncing";
     if (dayNum > 3) {
       const revIndex = (dayNum - 4) % total;
       revChapter = this.chapters[revIndex];
     }
     
-    return {
-      study: primaryChapter,
-      revise: revChapter
-    };
+    return { study: primaryChapter, revise: revChapter };
   }
 };
 
-// --- UNIVERSAL DIET CALCULATOR ENGINE ---
+// --- UNIVERSAL DIET LAB CALCULATOR ---
 function calculateUniversalDiet() {
   const targetCalories = parseFloat(document.getElementById('user-cal-input').value) || 1900;
-  const targetProtein = parseFloat(document.getElementById('user-pro-input').value) || 160;
+  const targetProtein = parseFloat(document.getElementById('user-pro-input').value) || 195;
   
-  // Calibration scaling equations relative to the 700ml tracking vessel
   const chickenWeight = (targetProtein * 0.6).toFixed(0);
   const chickenBowls = (chickenWeight / 250).toFixed(1);
   
@@ -139,87 +168,99 @@ function calculateUniversalDiet() {
   const riceWeight = (targetCalories * 0.12).toFixed(0);
   const riceBowls = (riceWeight / 150).toFixed(1);
   
-  const outputContainer = document.getElementById('diet-output-matrix');
-  outputContainer.innerHTML = `
+  document.getElementById('diet-output-matrix').innerHTML = `
     <div class="output-row-dish">
-      <span class="output-dish-title">🍗 Chicken Breast Allotment (Non-Veg Track)</span>
-      <span class="output-dish-value">${chickenWeight}g (~${chickenBowls} Full Bowl Units)</span>
+      <span class="output-dish-title">🍗 Chicken Breast Weight Allotment (Non-Veg)</span>
+      <span class="output-dish-value">${chickenWeight}g (~${chickenBowls} Bowls)</span>
     </div>
     <div class="output-row-dish">
-      <span class="output-dish-title">🌱 Boiled Soy Chunks + Dal Stack (Veg Track)</span>
-      <span class="output-dish-value">${soyWeight}g (~${soyBowls} Full Bowl Units)</span>
+      <span class="output-dish-title">🌱 Soya Chunks + Lentils Mix (Veg alternative)</span>
+      <span class="output-dish-value">${soyWeight}g (~${soyBowls} Bowls)</span>
     </div>
     <div class="output-row-dish">
-      <span class="output-dish-title">🥚 Whole Eggs + White Slices Bolus</span>
+      <span class="output-dish-title">🥚 Whole Eggs + Added Egg Whites Matrix</span>
       <span class="output-dish-value">${eggCount} Eggs Total (~1.0 Bowl Filled)</span>
     </div>
     <div class="output-row-dish">
-      <span class="output-dish-title">🍚 Carbo-Fuel Jasmine/White Rice Allocation</span>
-      <span class="output-dish-value">${riceWeight}g (~${riceBowls} Bowls Packaged Densely)</span>
+      <span class="output-dish-title">🍚 Performance Carb Rice Allocation</span>
+      <span class="output-dish-value">${riceWeight}g (~${riceBowls} Bowls Packed)</span>
     </div>
   `;
 }
 
-// --- DYNAMIC TIMELINE GENERATION ENGINE ---
-function buildDailyTimeline(dayNum, routine, neetTask) {
+// --- DYNAMIC TIMELINE CHECKLIST GENERATION ---
+function buildDailyTimeline(dayNum, routine, neetTask, dateKey) {
   const container = document.getElementById('timeline-schedule-container');
+  const dayData = AppState.completedTasks[dateKey] || {};
   
   const blocks = [
-    { time: "06:00 AM", title: "Wake Up & Posture Correction Stretches", desc: "Execute 3 sets of Wall Angels + APT alignment protocols instantly." },
-    { time: "08:00 AM", title: "Meal 1: High Protein Breakfast Bolus", desc: "Consume exactly 1 Full Tracking Bowl metric baseline requirement." },
-    { time: "10:00 AM", title: "NEET Deep Study: Pass 1 Focus Chapter", desc: `Active processing target: **${neetTask.study}**. Highlight exceptions cleanly.` },
-    { time: "01:00 PM", title: "Meal 2: Satiety Lunch Shield", desc: "Consume 1 Full Tracking Bowl allocation. Manage deficit hunger spikes." },
-    { time: "02:00 PM", title: "Strategic Cognitive Refresh Power Nap", desc: "Exactly 20-30 minutes horizontal rest. Drops neuro-fatigue baselines." },
-    { time: "03:30 PM", title: "Pre-Workout Stimulation Fuel", desc: "Black coffee + 1 pinch of sodium inside 0.5 fluid bowl tracking metric." },
-    { time: "04:00 PM", title: "Gym Session Execution Window", desc: routine.keys.length > 0 ? `Target Lift: **${routine.name}**. Execute specific highlighted items inside tab.` : "Active Rest. Complete 12,000 steps cardio movement safely." },
-    { time: "06:30 PM", title: "Meal 3: Glycogen Shuttling Post-Workout Dinner", desc: "Consume 1 Heaping Full Tracking Bowl directly following weight lifting." },
-    { time: "07:30 PM", title: "NEET Active Recall Spaced Revision Target", desc: `Force cognitive retrieval drill on: **${neetTask.revise}** without viewing notes first.` },
-    { time: "10:00 PM", title: "Meal 4: Nocturnal Repair Bolus & Deep Sleep Protocol", desc: "0.5 Bowl casein tracking layer. Screens off to secure muscle recovery cycle." }
+    { id: "sched_0600", time: "06:00 AM", title: "Wake Up & Posture Realignment", desc: "Execute 3 sets of Wall Angels + Anterior Pelvic Tilt correction drills." },
+    { id: "sched_0800", time: "08:00 AM", title: "Meal 1: High Protein Breakfast Bolus", desc: "Fill up 1 custom 700ml Tracking Vessel baseline macro target." },
+    { id: "sched_1000", time: "10:00 AM", title: "NEET Deep Core Study Window", desc: `Focus on Chapter: **${neetTask.study}**. Focus entirely on high-yield exceptions.` },
+    { id: "sched_1300", time: "01:00 PM", title: "Meal 2: Deficit Hunger Buffer Satiety Lunch", desc: "Consume 1 full tracking bowl allotment to secure energy stores." },
+    { id: "sched_1400", time: "02:00 PM", title: "Strategic Cognitive Refresh Power Nap", desc: "Exactly 20-30 minutes horizontal sleep. Resets neurological fatigue." },
+    { id: "sched_1530", time: "03:30 PM", title: "Pre-Gym Energy Stimulation", desc: "Black coffee + 1 heavy pinch of sodium mixed inside 0.5 water tracking vessel." },
+    { id: "sched_1600", time: "04:00 PM", title: "Gym Session Execution Window", desc: routine.keys.length > 0 ? `Target Workout: **${routine.name}**. Execute specific marked items inside Gym tab.` : "Active Rest. Hit a baseline minimum of 12,000 steps outdoors safely." },
+    { id: "sched_1830", time: "06:30 PM", title: "Meal 3: Glycogen Re-Shuttling Post-Workout Dinner", desc: "Consume 1 full tracking bowl load immediately following workout." },
+    { id: "sched_1930", time: "07:30 PM", title: "NEET Active Recall Spaced Revision Target", desc: `Force blind retrieval testing on Chapter: **${neetTask.revise}** without looking at summaries.` },
+    { id: "sched_2200", time: "10:00 PM", title: "Meal 4: Anti-Catabolic Night Layer & Sleep Routine", desc: "0.5 bowl casein metric layer. Shut off all screens to finalize deep muscle repair." }
   ];
   
-  container.innerHTML = blocks.map(b => `
-    <div class="time-block">
-      <div class="time-badge">${b.time}</div>
-      <div class="schedule-details">
-        <div class="schedule-title">${b.title}</div>
-        <div class="schedule-desc">${b.desc}</div>
+  container.innerHTML = blocks.map(b => {
+    const isChecked = dayData[b.id] ? "checked" : "";
+    const compClass = dayData[b.id] ? "completed-item" : "";
+    return `
+      <div class="time-block ${compClass}" id="container_${b.id}">
+        <input type="checkbox" class="timeline-checkbox" id="${b.id}" ${isChecked} onchange="toggleCheckboxSync('${dateKey}', '${b.id}', true)">
+        <div class="time-badge">${b.time}</div>
+        <div class="schedule-details">
+          <div class="schedule-title">${b.title}</div>
+          <div class="schedule-desc">${b.desc}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-// --- CHEKLIST CRITICAL ENGINE ---
+// --- MAIN OBLIGATIONS CHECKLIST ---
 function renderTasksChecklist(dateKey, routine, neetTask) {
   const container = document.getElementById('daily-summary-tasks');
-  if (!AppState.completedTasks[dateKey]) {
-    AppState.completedTasks[dateKey] = {};
-  }
+  if (!AppState.completedTasks[dateKey]) AppState.completedTasks[dateKey] = {};
+  const dayData = AppState.completedTasks[dateKey];
   
   const tasks = [
-    { id: "t_neet_study", label: `Study New Chapter: <strong>${neetTask.study}</strong> (NTA Standard Notes)` },
-    { id: "t_neet_rev", label: `Active Recall Revision: <strong>${neetTask.revise}</strong> (30 MCQ Test)` },
+    { id: "t_neet_study", label: `Study Chapter: <strong>${neetTask.study}</strong>` },
+    { id: "t_neet_rev", label: `Active Recall Test: <strong>${neetTask.revise}</strong>` },
     { id: "t_gym", label: routine.keys.length > 0 ? `Execute Weight Lift Routine: <strong>${routine.name}</strong>` : `Complete Active Recovery: <strong>12,000 Steps Walking</strong>` },
     { id: "t_protein", label: "Clear 195g Base Protein Bolus Target Across Single Bowls" }
   ];
   
   container.innerHTML = tasks.map(t => {
-    const isChecked = AppState.completedTasks[dateKey][t.id] ? "checked" : "";
+    const isChecked = dayData[t.id] ? "checked" : "";
     return `
       <div class="task-item-row">
-        <input type="checkbox" id="${t.id}" ${isChecked} onchange="toggleTaskSync('${dateKey}', '${t.id}')">
+        <input type="checkbox" id="${t.id}" ${isChecked} onchange="toggleCheckboxSync('${dateKey}', '${t.id}', false)">
         <span class="task-label-text">${t.label}</span>
       </div>
     `;
   }).join('');
 }
 
-function toggleTaskSync(dateKey, taskId) {
-  const checkbox = document.getElementById(taskId);
-  AppState.completedTasks[dateKey][taskId] = checkbox.checked;
+function toggleCheckboxSync(dateKey, checkboxId, isTimelineItem) {
+  const checkbox = document.getElementById(checkboxId);
+  if (!AppState.completedTasks[dateKey]) AppState.completedTasks[dateKey] = {};
+  
+  AppState.completedTasks[dateKey][checkboxId] = checkbox.checked;
+  
+  if (isTimelineItem) {
+    const wrapper = document.getElementById(`container_${checkboxId}`);
+    if (checkbox.checked) wrapper.classList.add('completed-item');
+    else wrapper.classList.remove('completed-item');
+  }
+  
   saveState();
 }
 
-// --- GYM HUB EXERCISE CATALOG DISPLAY ---
 function renderGymCatalog(activeRoutine) {
   const container = document.getElementById('massive-gym-catalog');
   let html = '';
@@ -233,7 +274,7 @@ function renderGymCatalog(activeRoutine) {
         <div class="exercise-dish-item ${isToday ? 'active-today' : ''}">
           <div class="dish-header">
             <span class="dish-name">${ex.name}</span>
-            <span class="dish-meta">${isToday ? '<span class="active-gold-marker">TODAY\'S DISH</span>' : 'À La Carte'}</span>
+            <span class="dish-meta">${isToday ? '<span class="active-gold-marker">TODAY\'S WORKOUT</span>' : 'Catalog Base'}</span>
           </div>
           <div class="dish-desc">${ex.desc}</div>
         </div>
@@ -244,7 +285,7 @@ function renderGymCatalog(activeRoutine) {
   container.innerHTML = html;
 }
 
-// --- GLOBAL APP CONTROLLER ORCHESTRATION ---
+// --- GLOBAL NAVIGATION SYSTEMS ---
 function changeDate(daysToMove) {
   AppState.activeDate.setDate(AppState.activeDate.getDate() + daysToMove);
   updateApplicationView();
@@ -262,20 +303,18 @@ function updateApplicationView() {
   const dayNum = getDayNumber(AppState.activeDate);
   const dateKey = AppState.activeDate.toISOString().split('T')[0];
   
-  // Format Date for premium header
   const options = { month: 'short', day: 'numeric', year: 'numeric' };
   document.getElementById('active-date-title').innerText = AppState.activeDate.toLocaleDateString('en-US', options);
-  document.getElementById('day-badge-display').innerText = `GIORNO ${dayNum}`;
+  document.getElementById('day-badge-display').innerText = `DAY ${dayNum}`;
   
-  // Pull data tracking points
   const currentRoutine = GymDatabase.getRoutineForDay(dayNum);
   const currentNeetTask = NeetDatabase.getTaskForDay(dayNum);
   
-  // Run component renders
-  buildDailyTimeline(dayNum, currentRoutine, currentNeetTask);
+  buildDailyTimeline(dayNum, currentRoutine, currentNeetTask, dateKey);
   renderTasksChecklist(dateKey, currentRoutine, currentNeetTask);
   renderGymCatalog(currentRoutine);
   calculateUniversalDiet();
+  calculateAndRenderStreak();
 }
 
 function forceCacheClear() {
@@ -289,7 +328,6 @@ function forceCacheClear() {
   }
 }
 
-// System Execution Trigger on Runtime Load
 window.addEventListener('DOMContentLoaded', () => {
   initAppTime();
   updateApplicationView();
