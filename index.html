@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TRANSFORMOS — IL PROTOCOLLO</title>
+  <title>TRANSFORMOS — THE MASTER PLAN</title>
   
+  <!-- PWA Standalone Capabilities -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TransformOS">
@@ -15,68 +16,84 @@
 </head>
 <body>
 
+  <!-- Menu Header -->
   <header class="menu-header">
     <div class="menu-container">
-      <div class="hotel-title">STRICTLY PRIVATO</div>
+      <div class="hotel-title">STRICTLY PRIVATE</div>
       <h1 class="app-logo">TRANSFORMOS</h1>
       <div class="menu-divider">✨ o ✨</div>
       <div class="date-navigator">
-        <button class="nav-arrow" onclick="changeDate(-1)">« Precedente</button>
+        <button class="nav-arrow" onclick="changeDate(-1)">« Previous</button>
         <span class="current-date-display" id="active-date-title">May 29, 2026</span>
-        <button class="nav-arrow" onclick="changeDate(1)">Successivo »</button>
+        <button class="nav-arrow" onclick="changeDate(1)">Next »</button>
       </div>
-      <div class="day-badge" id="day-badge-display">GIORNO 1</div>
+      <div class="badge-row">
+        <div class="day-badge" id="day-badge-display">DAY 1</div>
+        <div class="streak-badge" id="streak-display">0 DAY STREAK 🔥</div>
+      </div>
     </div>
   </header>
 
+  <!-- Navigation Tabs -->
   <nav class="menu-tabs">
-    <button class="tab-link active" onclick="switchTab('dashboard-view', this)">IL GIORNO</button>
-    <button class="tab-link" onclick="switchTab('gym-view', this)">PALESTRA HUB</button>
-    <button class="tab-link" onclick="switchTab('diet-view', this)">LABORATORIO DIETETICO</button>
+    <button class="tab-link active" onclick="switchTab('dashboard-view', this)">DAILY SCHEDULE</button>
+    <button class="tab-link" onclick="switchTab('gym-view', this)">GYM HUB</button>
+    <button class="tab-link" onclick="switchTab('diet-view', this)">DIET LAB</button>
   </nav>
 
   <main class="menu-frame">
     
+    <!-- TAB 1: DASHBOARD (DAILY SCHEDULE & TIMINGS FIRST) -->
     <div id="dashboard-view" class="tab-content active">
       <div class="menu-section-title">
-        <h2>IL PROGRAMMA DIARIO</h2>
-        <p class="section-subtitle">Chronobiological timing for maximum muscle retention & cognitive focus</p>
+        <h2>TODAY'S SCHEDULE</h2>
+        <p class="section-subtitle">Complete all items below to lock in your day and build your streak!</p>
       </div>
 
+      <!-- Live Daily Task Summary -->
       <div class="menu-card dynamic-tasks-card">
-        <h3>CRITICAL OBLIGATIONS TODAY</h3>
+        <h3>CRITICAL OBLIGATIONS</h3>
         <div id="daily-summary-tasks" class="task-checklist">
-          </div>
+          <!-- Populated via Javascript -->
+        </div>
       </div>
 
+      <!-- Full Time-Blocked Menu Schedule Checkboxes -->
+      <div class="menu-section-title" style="margin-top: 40px; margin-bottom: 15px;">
+        <h2>TIMELINE CHECKLIST</h2>
+      </div>
       <div class="schedule-timeline" id="timeline-schedule-container">
-        </div>
+        <!-- Dynamic Schedule Items Loaded Here -->
+      </div>
     </div>
 
+    <!-- TAB 2: GYM HUB -->
     <div id="gym-view" class="tab-content">
       <div class="menu-section-title">
-        <h2>CARTA DEI WORKOUT</h2>
-        <p class="section-subtitle">The Complete Mechanical Tension Compendium. Gold items denote today's selection.</p>
+        <h2>EXERCISE MENU</h2>
+        <p class="section-subtitle">Gold items denote the target dishes selected for today's workout.</p>
       </div>
       
       <div class="gym-layout">
         <div class="catalog-section">
-          <h3>IL COMPENDIO COMPLETO (EXERCISE CATALOG)</h3>
+          <h3>THE COMPLETE TRAINING COMPENDIUM</h3>
           <div id="massive-gym-catalog">
-            </div>
+            <!-- Full exercise groups -->
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- TAB 3: DIET LAB -->
     <div id="diet-view" class="tab-content">
       <div class="menu-section-title">
-        <h2>LABORATORIO DIETETICO</h2>
-        <p class="section-subtitle">Universal automated calculation engine calibrated to the 700ml Tracking Vessel</p>
+        <h2>DIET LAB</h2>
+        <p class="section-subtitle">Automated food mass calculations calibrated to your single 700ml tracking vessel</p>
       </div>
 
       <div class="menu-card">
         <h3>MACRO TARGET PROFILES INPUT</h3>
-        <p class="ex-detail" style="margin-bottom:15px;">Input your metrics for today. The algorithm automatically calculates exactly how much food you need in functional bowl units.</p>
+        <p class="ex-detail" style="margin-bottom:15px; font-size:13px; color:var(--text-dim);">Input your exact calorie and protein goals below. The tracking engine auto-approximates your total bowl distributions.</p>
         
         <div class="calculator-inputs">
           <div class="input-field">
@@ -84,8 +101,8 @@
             <input type="number" id="user-cal-input" value="1900" oninput="calculateUniversalDiet()">
           </div>
           <div class="input-field">
-            <label>Target Nitrogen (Protein in Grams)</label>
-            <input type="number" id="user-pro-input" value="160" oninput="calculateUniversalDiet()">
+            <label>Target Protein (Grams)</label>
+            <input type="number" id="user-pro-input" value="195" oninput="calculateUniversalDiet()">
           </div>
         </div>
 
@@ -93,14 +110,15 @@
 
         <h3>AUTOMATED BOWL DISH ALLOCATIONS</h3>
         <div class="calculated-outputs-grid" id="diet-output-matrix">
-          </div>
+          <!-- Dynamic calculations -->
+        </div>
       </div>
     </div>
 
   </main>
 
   <footer class="menu-footer">
-    <p>TransformOS V2.0 • Premium Calibration Framework</p>
+    <p>TransformOS V2.1 • High-Contrast Performance Matrix</p>
     <button class="force-update-btn" onclick="forceCacheClear()">Force Purge System Cache</button>
   </footer>
 
@@ -109,9 +127,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=2026-05-29')
+        navigator.serviceWorker.register('./sw.js?v=2026-05-29-v2')
           .then(reg => {
-            // Check if service worker is updated
             reg.onupdatefound = () => {
               const installingWorker = reg.installing;
               if (installingWorker) {
