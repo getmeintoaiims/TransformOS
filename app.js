@@ -1,498 +1,296 @@
-// --- CORE APP STATE & CONFIGURATION ---
+// --- TRANSFORMOS UNIFIED MASTER ENGINE ---
+// Anchored precisely to user target start timeline: May 29, 2026
+
 const AppConfig = {
-  startDate: new Date('2026-06-01T00:00:00'),
-  endDate: new Date('2026-11-20T23:59:59'), // Calibrated to Nov 20th
-  totalDays: 173                             // Calibrated to 173 Days
+  startDate: new Date('2026-05-29T00:00:00'),
+  totalDays: 173
 };
 
 let AppState = {
-  activeDate: new Date('2026-06-01T00:00:00'),
-  dietPreference: 'eggitarian',
-  completedTasks: {}, // Key: YYYY-MM-DD, Value: Array of checked task IDs
-  neetProgress: {} // Key: chapterId, Value: { studied: bool, revisions: int }
+  activeDate: new Date('2026-05-29T00:00:00'),
+  completedTasks: {} // Key: YYYY-MM-DD string, Value: Object map of checked values
 };
 
-// Initialize App State from LocalStorage
-function initStorage() {
-  const savedDiet = localStorage.getItem('dietPreference');
-  if (savedDiet) AppState.dietPreference = savedDiet;
-
-  const savedTasks = localStorage.getItem('completedTasks');
-  if (savedTasks) AppState.completedTasks = JSON.parse(savedTasks);
-
-  const savedNeet = localStorage.getItem('neetProgress');
-  if (savedNeet) AppState.neetProgress = JSON.parse(savedNeet);
-
-  // Default activeDate to today if today falls within our active timeframe
+// Initialize system dates relative to runtime clock
+function initAppTime() {
   const now = new Date();
-  if (now >= AppConfig.startDate && now <= AppConfig.endDate) {
+  const currentDateStr = now.toISOString().split('T')[0];
+  const targetStartStr = AppConfig.startDate.toISOString().split('T')[0];
+  
+  if (currentDateStr === targetStartStr || now >= AppConfig.startDate) {
     AppState.activeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   } else {
     AppState.activeDate = new Date(AppConfig.startDate);
   }
+  
+  // Load data cache
+  const savedTasks = localStorage.getItem('t_os_v2_tasks');
+  if (savedTasks) AppState.completedTasks = JSON.parse(savedTasks);
 }
 
 function saveState() {
-  localStorage.setItem('dietPreference', AppState.dietPreference);
-  localStorage.setItem('completedTasks', JSON.stringify(AppState.completedTasks));
-  localStorage.setItem('neetProgress', JSON.stringify(AppState.neetProgress));
+  localStorage.setItem('t_os_v2_tasks', JSON.stringify(AppState.completedTasks));
 }
 
-// --- UTILITY FUNCTIONS ---
-function formatDateStr(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function getDayNumber(targetDate) {
+  const diffTime = targetDate - AppConfig.startDate;
+  if (diffTime < 0) return 1;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-function getDayNumber(date) {
-  const d1 = new Date(AppConfig.startDate);
-  const d2 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffTime = d2.getTime() - d1.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  return diffDays;
-}
-
-// --- VIEW SWITCHER ---
-function switchTab(viewId, btnElement) {
-  // Hide all views
-  document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-  // Remove active from all tabs
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
-  // Show active view
-  document.getElementById(viewId).classList.add('active');
-  btnElement.classList.add('active');
-
-  // Trigger sub-renders if needed
-  if (viewId === 'gym-view') drawGymHub();
-  if (viewId === 'diet-view') drawDietLab();
-  if (viewId === 'neet-view') drawNEETPrep();
-}
-
-// --- DATE SLIDER CONTROLLER ---
-function adjustDate(offset) {
-  const newDate = new Date(AppState.activeDate);
-  newDate.setDate(newDate.getDate() + offset);
-
-  if (newDate >= AppConfig.startDate && newDate <= AppConfig.endDate) {
-    AppState.activeDate = newDate;
-    updateUI();
-  }
-}
-
-// --- CHECKS & TASKS HANDLERS ---
-function toggleTask(dateStr, taskId, checked) {
-  if (!AppState.completedTasks[dateStr]) {
-    AppState.completedTasks[dateStr] = [];
-  }
-
-  const index = AppState.completedTasks[dateStr].indexOf(taskId);
-  if (checked && index === -1) {
-    AppState.completedTasks[dateStr].push(taskId);
-  } else if (!checked && index !== -1) {
-    AppState.completedTasks[dateStr].splice(index, 1);
-  }
-
-  // Update NEET Chapter status if task relates to studying/revising
-  if (taskId.startsWith('study-')) {
-    const chapterId = taskId.replace('study-', '');
-    if (!AppState.neetProgress[chapterId]) {
-      AppState.neetProgress[chapterId] = { studied: false, revisions: 0 };
-    }
-    AppState.neetProgress[chapterId].studied = checked;
-  } else if (taskId.startsWith('rev-')) {
-    const parts = taskId.split('-');
-    const chapterId = parts[1];
-    if (!AppState.neetProgress[chapterId]) {
-      AppState.neetProgress[chapterId] = { studied: false, revisions: 0 };
-    }
-    if (checked) {
-      AppState.neetProgress[chapterId].revisions = Math.max(AppState.neetProgress[chapterId].revisions, parseInt(parts[2]));
-    }
-  }
-
-  saveState();
-  updateStreak();
-  updateUI();
-}
-
-// --- CORE CHECKS RENDERING ENGINE ---
-function drawChecklist() {
-  const dayNumber = getDayNumber(AppState.activeDate);
-  const dateStr = formatDateStr(AppState.activeDate);
-  const completed = AppState.completedTasks[dateStr] || [];
-
-  // Update slider displays
-  document.getElementById('day-num-display').innerText = `Day ${dayNumber} of ${AppConfig.totalDays}`;
-  document.getElementById('calendar-date-display').innerText = AppState.activeDate.toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
-
-  // Load target datasets
-  const training = TrainingSystem.getDailyTraining(dayNumber);
-  const nutrition = NutritionSystem.getDailyNutrition(dayNumber);
-  const study = StudySystem.getDailyStudy(dayNumber);
-
-  // Update Phase Banner
-  document.getElementById('phase-title').innerText = `Phase ${Math.min(5, Math.ceil(dayNumber / 35))}: ${training.phaseName}`;
-  document.getElementById('phase-desc').innerText = training.phaseDescription;
+// --- MASSIVE GYM COMPENDIO DATABASE ---
+const GymDatabase = {
+  categories: {
+    chest: [
+      { key: "incline_db_press", name: "30° Incline Dumbbell Bench Press", desc: "Clavicular head isolation, 3s eccentric lowering control." },
+      { key: "low_to_high_cable_fly", name: "Low-to-High Cable Fly", desc: "Shortened pectoral fiber focus. Eye level contraction meet." },
+      { key: "flat_barbell_press", name: "Flat Barbell Bench Press", desc: "Mid-pectoral general mechanical tension vector loading." },
+      { key: "weighted_dips", name: "Chest-Focused Weighted Dips", desc: "Lower pectoral sweep development. Torso leaned forward angle." }
+    ],
+    lats: [
+      { key: "single_arm_lat_pulldown", name: "Half-Kneeling Single-Arm Lat Pulldown", desc: "Iliac lower lat alignment. Elbow driven directly into hip bone path." },
+      { key: "chest_supported_neutral_row", name: "Chest-Supported Neutral Dumbbell Row", desc: "Thoracic lat width and mid-back rhomboid density engine." },
+      { key: "weighted_pullups", name: "Dead-Hang Weighted Pullups", desc: "Vertical pulling baseline mechanics. Pronated wide-grip leverage." },
+      { key: "barbell_bent_row", name: "Underhand Scapular Barbell Row", desc: "Erector stability combined with complete lat profile loading." }
+    ],
+    shoulders: [
+      { key: "behind_back_cable_lateral", name: "Behind-the-Back Cable Lateral Raise", desc: "Continuous stretch tension curve on lateral delts via low pulley notch." },
+      { key: "chest_supported_db_rear_row", name: "Chest-Supported Dumbbell Rear Delt Row", desc: "Isolates posterior deltoids cleanly without using lower back sway." },
+      { key: "cable_rear_delt_fly", name: "Cable Rear Delt Fly", desc: "Constant mechanical alignment for cross-body rear delt fibers." },
+      { key: "db_overhead_press", name: "Seated Dumbbell Shoulder Press", desc: "Anterior deltoid vertical compound pushing baseline framework." }
+    ],
+    legs: [
+      { key: "leg_press", name: "Linear Angle Leg Press", desc: "Safe quad/glute load expansion matching deep knee joint flexion." },
+      { key: "romanian_deadlift", name: "Barbell Romanian Deadlift (RDL)", desc: "Hinge vector isolating hamstrings and glutes in stretched states." },
+      { key: "db_bulgarian_split_squat", name: "Dumbbell Bulgarian Split Squat", desc: "Unilateral leg priority loading to eradicate symmetry discrepancies." },
+      { key: "seated_leg_curl", name: "Seated Hamstring Isolation Curl", desc: "Maximizes shortened range contractions without lower back loading." }
+    ],
+    core: [
+      { key: "decline_cable_crunch", name: "Kneeling Cable Rope Crunch", desc: "Spinal rectus abdominis flexion tracking with scaling heavy progressive weight overload." },
+      { key: "hanging_leg_raise", name: "Hanging Strict Vertical Leg Raise", desc: "Lower rectus abdominis tension control vector avoiding hip flexing swing." }
+    ]
+  },
   
-  // Calculate Phase Progress Bar
-  const phaseProgress = (dayNumber / AppConfig.totalDays) * 100;
-  document.getElementById('phase-progress-fill').style.width = `${phaseProgress}%`;
-
-  const checklistContainer = document.getElementById('daily-tasks-list');
-  checklistContainer.innerHTML = ''; // Clear prior content
-
-  const taskGroups = [];
-
-  // 1. Posture & Stretching Task
-  taskGroups.push({
-    id: 'posture-routine',
-    title: '🧘 Daily Posture Correction & Warm-up',
-    desc: 'Perform wall angels, couch stretches, and chin tucks to correct neck hump and anterior pelvic tilt.',
-    section: 'posture'
-  });
-
-  // 2. Training Session (if not a Rest day)
-  if (training.workoutName !== 'Rest') {
-    taskGroups.push({
-      id: `workout-${training.workoutName.toLowerCase().replace(/\s+/g, '-')}`,
-      title: `🏋️ Active Training Session: ${training.workoutName}`,
-      desc: `Complete all planned sets with strict biomechanics and execution parameters. Current target split.`,
-      section: 'gym'
-    });
-  }
-
-  // 3. Step Target (LISS cardio)
-  taskGroups.push({
-    id: 'step-target',
-    title: `🚶 Daily Step Target: ${training.steps.toLocaleString()} Steps`,
-    desc: `Low-impact steady-state cardio to maximize fat mobilization without causing hypertrophy interference.`,
-    section: 'steps'
-  });
-
-  // 4. NEET Primary Chapter (if First Pass is active)
-  if (study.newChapter) {
-    taskGroups.push({
-      id: `study-${study.newChapter.id}`,
-      title: `📚 NEET Core: Study ${study.newChapter.subject} — ${study.newChapter.name}`,
-      desc: `First systematic reading. Take structured active-recall notes and mark basic concepts in NCERT.`,
-      section: 'neet'
-    });
-  }
-
-  // 5. NEET Spaced Revisions due today
-  study.revisions.forEach(rev => {
-    taskGroups.push({
-      id: `rev-${rev.chapter.id}-${rev.interval}`,
-      title: `🔄 Revise: ${rev.chapter.subject} — ${rev.chapter.name}`,
-      desc: `${rev.type}. Use active recall flashcards and write down formulas from memory.`,
-      section: 'neet'
-    });
-  });
-
-  // 6. Supplement Stack timing check
-  taskGroups.push({
-    id: 'supplements-check',
-    title: `💊 Target Supplements Schedule`,
-    desc: `Creatine, caffeine pre-workout, D3 with breakfast, and active pink salt during training.`,
-    section: 'diet'
-  });
-
-  // 7. Calorie & Hydration Adherence
-  taskGroups.push({
-    id: 'diet-adherence',
-    title: `🍲 Macro Compliance: ${nutrition.calories} kcal Target`,
-    desc: `Meet exact bowl dimensions for curd, soya chunks, dal, and whites/paneer. Stay above 4L water.`,
-    section: 'diet'
-  });
-
-  // 8. Sleeping protocol
-  taskGroups.push({
-    id: 'sleep-protocol',
-    title: `💤 Sleep Recovery Architecture`,
-    desc: `Get 10+ hours of fully dark, restful sleep. Perform blue light blackout 60 minutes before bed.`,
-    section: 'sleep'
-  });
-
-  // Build Checklist HTML
-  taskGroups.forEach(task => {
-    const isCompleted = completed.includes(task.id);
-    const itemDiv = document.createElement('div');
-    itemDiv.className = `check-item ${isCompleted ? 'completed' : ''}`;
-    itemDiv.onclick = (e) => {
-      // Prevent double trigger if clicking label/checkmark container directly
-      if (e.target.tagName === 'INPUT') return;
-      const checkbox = itemDiv.querySelector('input');
-      checkbox.checked = !checkbox.checked;
-      toggleTask(dateStr, task.id, checkbox.checked);
-    };
-
-    itemDiv.innerHTML = `
-      <label class="checkbox-container">
-        <input type="checkbox" id="${task.id}" ${isCompleted ? 'checked' : ''} onchange="toggleTask('${dateStr}', '${task.id}', this.checked)">
-        <span class="checkmark"></span>
-      </label>
-      <div class="check-text">
-        <span class="title">${task.title}</span>
-        <span class="desc">${task.desc}</span>
-      </div>
-    `;
-
-    checklistContainer.appendChild(itemDiv);
-  });
-}
-
-// --- DIRECTORIES POPULATION ---
-function drawGymHub() {
-  const container = document.getElementById('gym-exercises-directory');
-  container.innerHTML = '';
-
-  Object.keys(TrainingSystem.exercises).forEach(key => {
-    const ex = TrainingSystem.exercises[key];
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title">${ex.name}</span>
-      </div>
-      <div class="ex-detail"><strong>Biomechanics Rationale:</strong> ${ex.rationale}</div>
-      <div class="ex-detail"><strong>Setup:</strong> ${ex.setup}</div>
-      <div class="ex-detail"><strong>Execution:</strong> ${ex.execution}</div>
-    `;
-    container.appendChild(div);
-  });
-
-  const postureContainer = document.getElementById('gym-posture-directory');
-  postureContainer.innerHTML = '';
-  TrainingSystem.posture.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title">${p.name}</span>
-        <span class="ex-sets">${p.reps}</span>
-      </div>
-      <div class="ex-detail"><strong>Guide:</strong> ${p.guide}</div>
-    `;
-    postureContainer.appendChild(div);
-  });
-}
-
-function setDietPreference(pref) {
-  AppState.dietPreference = pref;
-  document.getElementById('diet-toggle-egg').classList.toggle('active', pref === 'eggitarian');
-  document.getElementById('diet-toggle-veg').classList.toggle('active', pref === 'vegetarian');
-  saveState();
-  drawDietLab();
-  updateUI();
-}
-
-function drawDietLab() {
-  const dayNumber = getDayNumber(AppState.activeDate);
-  const nutrition = NutritionSystem.getDailyNutrition(dayNumber);
-
-  document.getElementById('diet-calories-display').innerText = `${nutrition.calories} kcal`;
-  document.getElementById('diet-protein-display').innerText = `${nutrition.protein}g`;
-  
-  const refeedAlert = document.getElementById('refeed-alert-text');
-  if (nutrition.isRefeed) {
-    refeedAlert.innerText = `🚨 ${nutrition.refeedNotes}`;
-  } else {
-    refeedAlert.innerText = "";
-  }
-
-  // Populate Bowl Scaling Metrics
-  const bowlContainer = document.getElementById('diet-bowl-directory');
-  bowlContainer.innerHTML = '';
-  nutrition.bowlMetrics.conversions.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title" style="color: var(--secondary);">${item.food}</span>
-        <span class="ex-sets">${item.portion}</span>
-      </div>
-      <div class="ex-detail">
-        <strong>Macros:</strong> ${item.protein} P | ${item.carbs} C | ${item.fats} F | (${item.calories})
-      </div>
-    `;
-    bowlContainer.appendChild(div);
-  });
-
-  // Populate Meals Breakdown
-  const mealsContainer = document.getElementById('diet-meals-schedule');
-  mealsContainer.innerHTML = '';
-  const activeDiet = nutrition.diets[AppState.dietPreference];
-  activeDiet.meals.forEach(meal => {
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title">${meal.name}</span>
-        <span class="ex-sets" style="background: rgba(167,139,250,0.15); color: var(--secondary);">${meal.timing}</span>
-      </div>
-      <div class="ex-detail"><strong>Scale:</strong> ${meal.items}</div>
-      <div class="ex-detail" style="font-style: italic; color: var(--text-muted); margin-top: 4px;">${meal.macros}</div>
-      <div class="ex-detail" style="font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; margin-top: 6px;">
-        <strong>Mechanism:</strong> ${meal.rationale}
-      </div>
-    `;
-    mealsContainer.appendChild(div);
-  });
-
-  // Populate Supplements Stack
-  const supplementsContainer = document.getElementById('diet-supplements-stack');
-  supplementsContainer.innerHTML = '';
-  nutrition.supplements.forEach(supp => {
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title">${supp.name}</span>
-        <span class="ex-sets" style="background: rgba(244,63,94,0.15); color: var(--accent);">${supp.dose}</span>
-      </div>
-      <div class="ex-detail"><strong>Circadian Timing:</strong> ${supp.timing}</div>
-      <div class="ex-detail"><strong>Evidence base:</strong> ${supp.evidence}</div>
-      <div class="ex-detail" style="font-size: 11px; color: var(--text-muted);"><strong>Broke Recommendation:</strong> ${supp.budgetBrand}</div>
-    `;
-    supplementsContainer.appendChild(div);
-  });
-}
-
-let activeSubjectFilter = 'All';
-function filterSyllabus(subject) {
-  activeSubjectFilter = subject;
-  document.getElementById('subject-all-btn').classList.toggle('active', subject === 'All');
-  document.getElementById('subject-bio-btn').classList.toggle('active', subject === 'Biology');
-  document.getElementById('subject-phy-btn').classList.toggle('active', subject === 'Physics');
-  document.getElementById('subject-chem-btn').classList.toggle('active', subject === 'Chemistry');
-  drawNEETPrep();
-}
-
-function drawNEETPrep() {
-  const container = document.getElementById('neet-chapters-directory');
-  container.innerHTML = '';
-
-  const filtered = StudySystem.chapters.filter(ch => {
-    if (activeSubjectFilter === 'All') return true;
-    return ch.subject === activeSubjectFilter;
-  });
-
-  filtered.forEach(ch => {
-    const prog = AppState.neetProgress[ch.id] || { studied: false, revisions: 0 };
-    const div = document.createElement('div');
-    div.className = 'ex-card';
-    div.style.borderColor = prog.studied ? 'var(--success)' : 'var(--border-glass)';
-    div.innerHTML = `
-      <div class="ex-header">
-        <span class="ex-title" style="color: ${prog.studied ? 'var(--success)' : 'var(--text-primary)'};">${ch.name}</span>
-        <span class="ex-sets" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">${ch.subject}</span>
-      </div>
-      <div class="ex-detail">
-        Status: <strong>${prog.studied ? 'First Pass Completed ✅' : 'Pending First Pass ⏳'}</strong> | 
-        Active Recall Revisions: <strong>${prog.revisions} Completed</strong>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-
-  // Update NEET global progress bars
-  let studiedCount = 0;
-  StudySystem.chapters.forEach(ch => {
-    if (AppState.neetProgress[ch.id] && AppState.neetProgress[ch.id].studied) {
-      studiedCount++;
+  // Deterministic daily routines based on active phase
+  getRoutineForDay: function(dayNum) {
+    if (dayNum <= 30) { // Phase 1: Upper / Lower Split
+      const cycle = (dayNum - 1) % 7;
+      if (cycle === 0) return { name: "Upper A", keys: ["incline_db_press", "single_arm_lat_pulldown", "behind_back_cable_lateral", "chest_supported_db_rear_row", "decline_cable_crunch"] };
+      if (cycle === 1) return { name: "Lower A", keys: ["leg_press", "romanian_deadlift", "db_bulgarian_split_squat"] };
+      if (cycle === 2) return { name: "Rest & Active Posture Recovery", keys: [] };
+      if (cycle === 3) return { name: "Upper B", keys: ["low_to_high_cable_fly", "chest_supported_neutral_row", "behind_back_cable_lateral", "cable_rear_delt_fly", "hanging_leg_raise"] };
+      if (cycle === 4) return { name: "Lower B", keys: ["romanian_deadlift", "leg_press", "db_bulgarian_split_squat"] };
+      return { name: "Rest & Active Recovery", keys: [] };
+    } else { // Phase 2+: Push / Pull / Legs
+      const cycle = (dayNum - 1) % 4;
+      if (cycle === 0) return { name: "Push Day Protocol", keys: ["incline_db_press", "low_to_high_cable_fly", "behind_back_cable_lateral", "decline_cable_crunch"] };
+      if (cycle === 1) return { name: "Pull Day Protocol", keys: ["single_arm_lat_pulldown", "chest_supported_neutral_row", "chest_supported_db_rear_row", "cable_rear_delt_fly"] };
+      if (cycle === 2) return { name: "Legs Deep Loading", keys: ["romanian_deadlift", "leg_press", "db_bulgarian_split_squat", "hanging_leg_raise"] };
+      return { name: "Systemic Recovery Rest", keys: [] };
     }
-  });
-
-  document.getElementById('neet-studied-count').innerText = studiedCount;
-  document.getElementById('neet-total-chapters').innerText = StudySystem.chapters.length;
-
-  const barFill = document.getElementById('neet-syllabus-bar-fill');
-  const percentage = Math.round((studiedCount / StudySystem.chapters.length) * 100);
-  barFill.style.width = `${percentage}%`;
-  document.getElementById('study-percent-display').innerText = `${percentage}%`;
-}
-
-// --- GLOBAL STREAK COMPILER ---
-function updateStreak() {
-  let currentStreak = 0;
-  const todayStr = formatDateStr(new Date());
-
-  // Scan backwards from today to check continuous compliance
-  let checkDate = new Date();
-  while (true) {
-    const checkDateStr = formatDateStr(checkDate);
-    if (checkDate < AppConfig.startDate) break;
-
-    const completed = AppState.completedTasks[checkDateStr] || [];
-    const dayNumber = getDayNumber(checkDate);
-    const training = TrainingSystem.getDailyTraining(dayNumber);
-    const study = StudySystem.getDailyStudy(dayNumber);
-
-    // Compute active tasks target for this date
-    let targetCount = 6; // Base tasks (posture, steps, supplements, diet, sleep, general)
-    if (training.workoutName !== 'Rest') targetCount++;
-    if (study.newChapter) targetCount++;
-    targetCount += study.revisions.length;
-
-    // Check if the user successfully marked ALL tasks as done for this day
-    if (completed.length >= targetCount && targetCount > 0) {
-      currentStreak++;
-    } else {
-      // If we checked today and it's incomplete, don't break the streak immediately; only break if prior days are incomplete.
-      if (checkDateStr !== todayStr) {
-        break;
-      }
-    }
-    checkDate.setDate(checkDate.getDate() - 1);
   }
-
-  document.getElementById('streak-count').innerText = currentStreak;
-}
-
-// --- SETTINGS CONTROLLER ---
-function exportData() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState));
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `TransformOS_Backup_${formatDateStr(new Date())}.json`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-}
-
-function resetAppData() {
-  if (confirm("🚨 WARNING: This will permanently delete all completed tasks, streak scores, and academic tracking. Are you absolutely ready to wipe?")) {
-    localStorage.clear();
-    AppState = {
-      activeDate: new Date(AppConfig.startDate),
-      dietPreference: 'eggitarian',
-      completedTasks: {},
-      neetProgress: {}
-    };
-    saveState();
-    updateUI();
-  }
-}
-
-// --- GLOBAL UI UPDATE ORCHESTRATOR ---
-function updateUI() {
-  drawChecklist();
-  
-  // Calculate general recomposition timeline completion percentage
-  const dayNumber = getDayNumber(AppState.activeDate);
-  const recompPct = Math.min(100, Math.round((dayNumber / AppConfig.totalDays) * 100));
-  document.getElementById('recomp-percent-display').innerText = `${recompPct}%`;
-
-  updateStreak();
-}
-
-// --- WINDOW INITIALIZATION LOAD ---
-window.onload = () => {
-  initStorage();
-  updateUI();
 };
+
+// --- DIRECT LINEAR NEET SYLLABUS LOG ENGINE ---
+const NeetDatabase = {
+  chapters: [
+    "Units & Measurements", "Motion in a Straight Line", "Motion in a Plane", "Laws of Motion", 
+    "Work, Energy & Power", "System of Particles & Rotational Motion", "Gravitation", "Mechanical Properties of Solids",
+    "Some Basic Concepts of Chemistry", "Structure of Atom", "Classification of Elements & Periodicity", "Chemical Bonding",
+    "The Living World", "Biological Classification", "Plant Kingdom", "Animal Kingdom",
+    "Thermodynamics", "Kinetic Theory", "Oscillations", "Waves", "Solutions", "Electrochemistry", "Chemical Kinetics",
+    "Morphology of Flowering Plants", "Anatomy of Flowering Plants", "Structural Organisation in Animals", "Cell: Unit of Life",
+    "Biomolecules", "Cell Cycle & Cell Division", "Transport in Plants", "Mineral Nutrition", "Photosynthesis in Higher Plants"
+  ],
+  
+  getTaskForDay: function(dayNum) {
+    const total = this.chapters.length;
+    // Primary Chapter Allocation (Pass 1)
+    const primaryIndex = (dayNum - 1) % total;
+    const primaryChapter = this.chapters[primaryIndex];
+    
+    // Revision Target Calculation (3 days behind for active recall loop)
+    let revChapter = "No Revision Assigned yet (Initial Consolidation Running)";
+    if (dayNum > 3) {
+      const revIndex = (dayNum - 4) % total;
+      revChapter = this.chapters[revIndex];
+    }
+    
+    return {
+      study: primaryChapter,
+      revise: revChapter
+    };
+  }
+};
+
+// --- UNIVERSAL DIET CALCULATOR ENGINE ---
+function calculateUniversalDiet() {
+  const targetCalories = parseFloat(document.getElementById('user-cal-input').value) || 1900;
+  const targetProtein = parseFloat(document.getElementById('user-pro-input').value) || 160;
+  
+  // Calibration scaling equations relative to the 700ml tracking vessel
+  const chickenWeight = (targetProtein * 0.6).toFixed(0);
+  const chickenBowls = (chickenWeight / 250).toFixed(1);
+  
+  const soyWeight = (targetProtein * 0.25).toFixed(0);
+  const soyBowls = (soyWeight / 75).toFixed(1);
+  
+  const eggCount = Math.round(targetProtein * 0.04);
+  const riceWeight = (targetCalories * 0.12).toFixed(0);
+  const riceBowls = (riceWeight / 150).toFixed(1);
+  
+  const outputContainer = document.getElementById('diet-output-matrix');
+  outputContainer.innerHTML = `
+    <div class="output-row-dish">
+      <span class="output-dish-title">🍗 Chicken Breast Allotment (Non-Veg Track)</span>
+      <span class="output-dish-value">${chickenWeight}g (~${chickenBowls} Full Bowl Units)</span>
+    </div>
+    <div class="output-row-dish">
+      <span class="output-dish-title">🌱 Boiled Soy Chunks + Dal Stack (Veg Track)</span>
+      <span class="output-dish-value">${soyWeight}g (~${soyBowls} Full Bowl Units)</span>
+    </div>
+    <div class="output-row-dish">
+      <span class="output-dish-title">🥚 Whole Eggs + White Slices Bolus</span>
+      <span class="output-dish-value">${eggCount} Eggs Total (~1.0 Bowl Filled)</span>
+    </div>
+    <div class="output-row-dish">
+      <span class="output-dish-title">🍚 Carbo-Fuel Jasmine/White Rice Allocation</span>
+      <span class="output-dish-value">${riceWeight}g (~${riceBowls} Bowls Packaged Densely)</span>
+    </div>
+  `;
+}
+
+// --- DYNAMIC TIMELINE GENERATION ENGINE ---
+function buildDailyTimeline(dayNum, routine, neetTask) {
+  const container = document.getElementById('timeline-schedule-container');
+  
+  const blocks = [
+    { time: "06:00 AM", title: "Wake Up & Posture Correction Stretches", desc: "Execute 3 sets of Wall Angels + APT alignment protocols instantly." },
+    { time: "08:00 AM", title: "Meal 1: High Protein Breakfast Bolus", desc: "Consume exactly 1 Full Tracking Bowl metric baseline requirement." },
+    { time: "10:00 AM", title: "NEET Deep Study: Pass 1 Focus Chapter", desc: `Active processing target: **${neetTask.study}**. Highlight exceptions cleanly.` },
+    { time: "01:00 PM", title: "Meal 2: Satiety Lunch Shield", desc: "Consume 1 Full Tracking Bowl allocation. Manage deficit hunger spikes." },
+    { time: "02:00 PM", title: "Strategic Cognitive Refresh Power Nap", desc: "Exactly 20-30 minutes horizontal rest. Drops neuro-fatigue baselines." },
+    { time: "03:30 PM", title: "Pre-Workout Stimulation Fuel", desc: "Black coffee + 1 pinch of sodium inside 0.5 fluid bowl tracking metric." },
+    { time: "04:00 PM", title: "Gym Session Execution Window", desc: routine.keys.length > 0 ? `Target Lift: **${routine.name}**. Execute specific highlighted items inside tab.` : "Active Rest. Complete 12,000 steps cardio movement safely." },
+    { time: "06:30 PM", title: "Meal 3: Glycogen Shuttling Post-Workout Dinner", desc: "Consume 1 Heaping Full Tracking Bowl directly following weight lifting." },
+    { time: "07:30 PM", title: "NEET Active Recall Spaced Revision Target", desc: `Force cognitive retrieval drill on: **${neetTask.revise}** without viewing notes first.` },
+    { time: "10:00 PM", title: "Meal 4: Nocturnal Repair Bolus & Deep Sleep Protocol", desc: "0.5 Bowl casein tracking layer. Screens off to secure muscle recovery cycle." }
+  ];
+  
+  container.innerHTML = blocks.map(b => `
+    <div class="time-block">
+      <div class="time-badge">${b.time}</div>
+      <div class="schedule-details">
+        <div class="schedule-title">${b.title}</div>
+        <div class="schedule-desc">${b.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// --- CHEKLIST CRITICAL ENGINE ---
+function renderTasksChecklist(dateKey, routine, neetTask) {
+  const container = document.getElementById('daily-summary-tasks');
+  if (!AppState.completedTasks[dateKey]) {
+    AppState.completedTasks[dateKey] = {};
+  }
+  
+  const tasks = [
+    { id: "t_neet_study", label: `Study New Chapter: <strong>${neetTask.study}</strong> (NTA Standard Notes)` },
+    { id: "t_neet_rev", label: `Active Recall Revision: <strong>${neetTask.revise}</strong> (30 MCQ Test)` },
+    { id: "t_gym", label: routine.keys.length > 0 ? `Execute Weight Lift Routine: <strong>${routine.name}</strong>` : `Complete Active Recovery: <strong>12,000 Steps Walking</strong>` },
+    { id: "t_protein", label: "Clear 195g Base Protein Bolus Target Across Single Bowls" }
+  ];
+  
+  container.innerHTML = tasks.map(t => {
+    const isChecked = AppState.completedTasks[dateKey][t.id] ? "checked" : "";
+    return `
+      <div class="task-item-row">
+        <input type="checkbox" id="${t.id}" ${isChecked} onchange="toggleTaskSync('${dateKey}', '${t.id}')">
+        <span class="task-label-text">${t.label}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleTaskSync(dateKey, taskId) {
+  const checkbox = document.getElementById(taskId);
+  AppState.completedTasks[dateKey][taskId] = checkbox.checked;
+  saveState();
+}
+
+// --- GYM HUB EXERCISE CATALOG DISPLAY ---
+function renderGymCatalog(activeRoutine) {
+  const container = document.getElementById('massive-gym-catalog');
+  let html = '';
+  
+  for (const [category, exercises] of Object.entries(GymDatabase.categories)) {
+    html += `<h4 style="color: var(--tuscan-gold); text-transform: uppercase; font-family: var(--font-serif); margin: 20px 0 10px 0; border-bottom: 1px solid var(--charcoal-border); letter-spacing:1px;">${category.toUpperCase()} SELECTION</h4>`;
+    
+    exercises.forEach(ex => {
+      const isToday = activeRoutine.keys.includes(ex.key);
+      html += `
+        <div class="exercise-dish-item ${isToday ? 'active-today' : ''}">
+          <div class="dish-header">
+            <span class="dish-name">${ex.name}</span>
+            <span class="dish-meta">${isToday ? '<span class="active-gold-marker">TODAY\'S DISH</span>' : 'À La Carte'}</span>
+          </div>
+          <div class="dish-desc">${ex.desc}</div>
+        </div>
+      `;
+    });
+  }
+  
+  container.innerHTML = html;
+}
+
+// --- GLOBAL APP CONTROLLER ORCHESTRATION ---
+function changeDate(daysToMove) {
+  AppState.activeDate.setDate(AppState.activeDate.getDate() + daysToMove);
+  updateApplicationView();
+}
+
+function switchTab(tabId, buttonEl) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.add('active');
+  buttonEl.classList.add('active');
+}
+
+function updateApplicationView() {
+  const dayNum = getDayNumber(AppState.activeDate);
+  const dateKey = AppState.activeDate.toISOString().split('T')[0];
+  
+  // Format Date for premium header
+  const options = { month: 'short', day: 'numeric', year: 'numeric' };
+  document.getElementById('active-date-title').innerText = AppState.activeDate.toLocaleDateString('en-US', options);
+  document.getElementById('day-badge-display').innerText = `GIORNO ${dayNum}`;
+  
+  // Pull data tracking points
+  const currentRoutine = GymDatabase.getRoutineForDay(dayNum);
+  const currentNeetTask = NeetDatabase.getTaskForDay(dayNum);
+  
+  // Run component renders
+  buildDailyTimeline(dayNum, currentRoutine, currentNeetTask);
+  renderTasksChecklist(dateKey, currentRoutine, currentNeetTask);
+  renderGymCatalog(currentRoutine);
+  calculateUniversalDiet();
+}
+
+function forceCacheClear() {
+  if (confirm("Purge application cache storage to sync current development updates?")) {
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        for (let name of names) caches.delete(name);
+      });
+    }
+    window.location.reload(true);
+  }
+}
+
+// System Execution Trigger on Runtime Load
+window.addEventListener('DOMContentLoaded', () => {
+  initAppTime();
+  updateApplicationView();
+});
