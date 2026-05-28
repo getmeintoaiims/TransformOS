@@ -392,5 +392,25 @@ body {
 }
 .force-update-btn:hover {
   border-color: var(--tuscan-gold);
+
+  /* Grind Notification Button Styling */
+.notification-toggle-btn {
+  display: inline-block;
+  font-size: 11px;
+  background: #1c1a17;
+  color: var(--tuscan-gold);
+  border: 1px dashed var(--tuscan-gold);
+  padding: 4px 12px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-toggle-btn.enabled-active {
+  background: #1c261c;
+  color: #8ae79a;
+  border: 1px solid #8ae79a;
+}
   color: var(--tuscan-gold);
 }
